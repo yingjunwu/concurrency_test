@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <vector>
 #include <thread>
-#include <iostream>
+#include <cstdio>
 #include <chrono>
 
 #include "libcuckoo/cuckoohash_map.hh"
@@ -110,6 +110,7 @@ const int kInitTupleCount = 10000000;
 const int time_duration = 10;
 bool is_running = false;
 int *operation_counts = nullptr;
+FILE * pFile;
 
 void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const int read_percent) {
   PinToCore(thread_id);
@@ -162,15 +163,20 @@ void RunWorkload(const int &thread_count, const int &read_percent) {
 
   printf("thread count = %d, read percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, total_count * 1.0 / time_duration / 1000 / 1000);
 
+  fprintf(pFile, "thread count = %d, read percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, total_count * 1.0 / time_duration / 1000 / 1000);
+  fflush(pFile);
+
   delete[] operation_counts;
   operation_counts = nullptr;
 }
 
 int main() {
+  pFile = fopen("libcuckoo.log", "w");
   for (int read_percent = 0; read_percent <= 100; read_percent += 20) {
     RunWorkload(1, read_percent);
     for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
       RunWorkload(thread_count, read_percent);
     }
   }
+  fclose(pFile);
 }
