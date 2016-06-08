@@ -4,6 +4,7 @@
 #include <thread>
 #include <cstdio>
 #include <chrono>
+#include <atomic>
 
 #include "libcuckoo/cuckoohash_map.hh"
 
@@ -106,13 +107,13 @@ private:
   system_clock::time_point end_time_;
 };
 
-const int kInitTupleCount = 10000000;
+std::atomic<int> max_tuple_id;
 const int time_duration = 10;
 bool is_running = false;
 int *operation_counts = nullptr;
 FILE * pFile;
 
-void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const int read_percent) {
+void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const int &read_percent, const int &insert_percent) {
   PinToCore(thread_id);
   fast_random rand_gen(thread_id);
   int64_t sum = 0;
@@ -122,13 +123,19 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
   while (true) {
     if (is_running == false) {
       break;
-    }  
-    if (rand_gen.next() % 100 < read_percent) {
-      sum += (*my_map)[rand_gen.next() % kInitTupleCount];
-      // ++read_operation_count;
-    } else {
-      (*my_map)[rand_gen.next() % kInitTupleCount] = 100;
-      // ++write_operation_count;
+    }
+    if (rand_gen.next() % 100 < insert_percent) {  
+      int my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
+      (*my_map)[my_id] = 100;
+    }
+    else {  
+      if (rand_gen.next() % 100 < read_percent) {
+        sum += (*my_map)[rand_gen.next() % max_tuple_id];
+        // ++read_operation_count;
+      } else {
+        (*my_map)[rand_gen.next() % max_tuple_id] = 100;
+        // ++write_operation_count;
+      }
     }
     ++operation_count;
   }
@@ -136,19 +143,19 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
   // printf("read count = %d, write count = %d\n", read_operation_count, write_operation_count);
 }
 
-void RunWorkload(const int &thread_count, const int &read_percent) {
+void RunWorkload(const int &thread_count, const int &read_percent, const int &insert_percent) {
   operation_counts = new int[thread_count];
 
   cuckoohash_map<int64_t, int64_t> my_map;  
   // populate.
-  for (int i = 0; i < kInitTupleCount; ++i) {
+  for (int i = 0; i < max_tuple_id; ++i) {
     my_map[i] = 100;
   }
 
   is_running = true;
   std::vector<std::thread> worker_threads;
   for (int i = 0; i < thread_count; ++i) {
-    worker_threads.push_back(std::move(std::thread(RunWorkerThread, i, &my_map, read_percent)));
+    worker_threads.push_back(std::move(std::thread(RunWorkerThread, i, &my_map, read_percent, insert_percent)));
   }
   std::this_thread::sleep_for(std::chrono::seconds(time_duration));
   is_running = false;
@@ -161,9 +168,9 @@ void RunWorkload(const int &thread_count, const int &read_percent) {
     total_count += operation_counts[i];
   }
 
-  printf("thread count = %d, read percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, total_count * 1.0 / time_duration / 1000 / 1000);
+  printf("thread count = %d, read percentage = %d, insert percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, insert_percent, total_count * 1.0 / time_duration / 1000 / 1000);
 
-  fprintf(pFile, "thread count = %d, read percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, total_count * 1.0 / time_duration / 1000 / 1000);
+  fprintf(pFile, "thread count = %d, read percentage = %d, insert percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, insert_percent, total_count * 1.0 / time_duration / 1000 / 1000);
   fflush(pFile);
 
   delete[] operation_counts;
@@ -171,11 +178,14 @@ void RunWorkload(const int &thread_count, const int &read_percent) {
 }
 
 int main() {
+  max_tuple_id = 1000;
   pFile = fopen("libcuckoo.log", "w");
-  for (int read_percent = 0; read_percent <= 100; read_percent += 20) {
-    RunWorkload(1, read_percent);
-    for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
-      RunWorkload(thread_count, read_percent);
+  for (int insert_percent = 0; insert_percent <= 100; insert_percent += 20) {
+    for (int read_percent = 0; read_percent <= 100; read_percent += 20) {
+      RunWorkload(1, read_percent, insert_percent);
+      for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
+        RunWorkload(thread_count, read_percent, insert_percent);
+      }
     }
   }
   fclose(pFile);
