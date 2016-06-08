@@ -107,7 +107,7 @@ private:
   system_clock::time_point end_time_;
 };
 
-std::atomic<int> max_tuple_id;
+std::atomic<int64_t> max_tuple_id;
 const int time_duration = 10;
 bool is_running = false;
 int *operation_counts = nullptr;
@@ -116,24 +116,36 @@ FILE * pFile;
 void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const int &read_percent, const int &insert_percent) {
   PinToCore(thread_id);
   fast_random rand_gen(thread_id);
-  int64_t sum = 0;
   int operation_count = 0;
   // int read_operation_count = 0;
   // int write_operation_count = 0;
+  int64_t value = 0;
   while (true) {
     if (is_running == false) {
       break;
     }
     if (rand_gen.next() % 100 < insert_percent) {  
-      int my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
-      (*my_map)[my_id] = 100;
+      int64_t my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
+      bool ret = my_map->insert(my_id, 100);
+      if (ret == false) {
+        fprintf(stderr, "insert failed!\n");
+      }
+
     }
-    else {  
+    else {
       if (rand_gen.next() % 100 < read_percent) {
-        sum += (*my_map)[rand_gen.next() % max_tuple_id];
+        int64_t key = rand_gen.next() % max_tuple_id;
+        bool ret = my_map->find(key, value);
+        if (ret == false) {
+          fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
+        }
         // ++read_operation_count;
       } else {
-        (*my_map)[rand_gen.next() % max_tuple_id] = 100;
+        int64_t key = rand_gen.next() % max_tuple_id;
+        bool ret = my_map->update(key, 100);
+        if (ret == false) {
+          fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
+        }
         // ++write_operation_count;
       }
     }
@@ -147,6 +159,7 @@ void RunWorkload(const int &thread_count, const int &read_percent, const int &in
   operation_counts = new int[thread_count];
 
   cuckoohash_map<int64_t, int64_t> my_map;  
+  max_tuple_id = 1000;
   // populate.
   for (int i = 0; i < max_tuple_id; ++i) {
     my_map[i] = 100;
@@ -178,9 +191,14 @@ void RunWorkload(const int &thread_count, const int &read_percent, const int &in
 }
 
 int main() {
-  max_tuple_id = 1000;
   pFile = fopen("libcuckoo.log", "w");
-  for (int insert_percent = 0; insert_percent <= 100; insert_percent += 20) {
+  
+  // RunWorkload(1, 0, 100);
+  // for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
+  //   RunWorkload(thread_count, 0, 100);
+  // }
+  
+  for (int insert_percent = 80; insert_percent >= 0; insert_percent -= 20) {
     for (int read_percent = 0; read_percent <= 100; read_percent += 20) {
       RunWorkload(1, read_percent, insert_percent);
       for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
@@ -188,5 +206,6 @@ int main() {
       }
     }
   }
+      
   fclose(pFile);
 }
