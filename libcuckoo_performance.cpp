@@ -113,7 +113,7 @@ bool is_running = false;
 int *operation_counts = nullptr;
 FILE * pFile;
 
-void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const int &read_percent, const int &insert_percent) {
+void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const std::vector<int> config) {
   PinToCore(thread_id);
   fast_random rand_gen(thread_id);
   int operation_count = 0;
@@ -124,7 +124,8 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
     if (is_running == false) {
       break;
     }
-    if (rand_gen.next() % 100 < insert_percent) {  
+    int rand_num = rand_gen.next();
+    if (rand_num % 100 < config[0]) {  
       int64_t my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
       bool ret = my_map->insert(my_id, 100);
       if (ret == false) {
@@ -132,22 +133,20 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
       }
 
     }
-    else {
-      if (rand_gen.next() % 100 < read_percent) {
+    else if (rand_num % 100 < config[0] + config[1]) {
         int64_t key = rand_gen.next() % max_tuple_id;
         bool ret = my_map->find(key, value);
         if (ret == false) {
           fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
         }
         // ++read_operation_count;
-      } else {
-        int64_t key = rand_gen.next() % max_tuple_id;
-        bool ret = my_map->update(key, 100);
-        if (ret == false) {
-          fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
-        }
-        // ++write_operation_count;
+    } else {
+      int64_t key = rand_gen.next() % max_tuple_id;
+      bool ret = my_map->update(key, 100);
+      if (ret == false) {
+        fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
       }
+      // ++write_operation_count;
     }
     ++operation_count;
   }
@@ -155,7 +154,7 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
   // printf("read count = %d, write count = %d\n", read_operation_count, write_operation_count);
 }
 
-void RunWorkload(const int &thread_count, const int &read_percent, const int &insert_percent) {
+void RunWorkload(const int &thread_count, const std::vector<int> config) {
   operation_counts = new int[thread_count];
 
   cuckoohash_map<int64_t, int64_t> my_map;  
@@ -168,7 +167,7 @@ void RunWorkload(const int &thread_count, const int &read_percent, const int &in
   is_running = true;
   std::vector<std::thread> worker_threads;
   for (int i = 0; i < thread_count; ++i) {
-    worker_threads.push_back(std::move(std::thread(RunWorkerThread, i, &my_map, read_percent, insert_percent)));
+    worker_threads.push_back(std::move(std::thread(RunWorkerThread, i, &my_map, config)));
   }
   std::this_thread::sleep_for(std::chrono::seconds(time_duration));
   is_running = false;
@@ -181,9 +180,10 @@ void RunWorkload(const int &thread_count, const int &read_percent, const int &in
     total_count += operation_counts[i];
   }
 
-  printf("thread count = %d, read percentage = %d, insert percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, insert_percent, total_count * 1.0 / time_duration / 1000 / 1000);
+  printf("thread count = %d, read = %d, write = %d, insert = %d, throughput = %.1f M ops\n", thread_count, config[0], config[1], config[2], total_count * 1.0 / time_duration / 1000 / 1000);
 
-  fprintf(pFile, "thread count = %d, read percentage = %d, insert percentage = %d, throughput = %.1f M ops\n", thread_count, read_percent, insert_percent, total_count * 1.0 / time_duration / 1000 / 1000);
+  fprintf(pFile, "thread count = %d, read = %d, write = %d, insert = %d, throughput = %.1f M ops\n", thread_count, config[0], config[1], config[2], total_count * 1.0 / time_duration / 1000 / 1000);
+  
   fflush(pFile);
 
   delete[] operation_counts;
@@ -193,18 +193,17 @@ void RunWorkload(const int &thread_count, const int &read_percent, const int &in
 int main() {
   pFile = fopen("libcuckoo.log", "w");
   
-  // RunWorkload(1, 0, 100);
-  // for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
-  //   RunWorkload(thread_count, 0, 100);
-  // }
-  
-  for (int insert_percent = 80; insert_percent >= 0; insert_percent -= 20) {
-    for (int read_percent = 0; read_percent <= 100; read_percent += 20) {
-      RunWorkload(1, read_percent, insert_percent);
+  std::vector<std::vector<int>> configs;
+  // configs.emplace_back({0,0,100});
+  // configs.emplace_back({0,20,80});
+  // configs.emplace_back({0,80,20});
+  // configs.emplace_back({20,0,80});
+  configs.emplace_back({80,0,20});
+  for (auto config : configs) {
+    RunWorkload(1, config);
       for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
-        RunWorkload(thread_count, read_percent, insert_percent);
+        RunWorkload(thread_count, config);
       }
-    }
   }
       
   fclose(pFile);
