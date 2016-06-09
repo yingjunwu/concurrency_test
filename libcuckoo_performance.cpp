@@ -130,14 +130,14 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
       int64_t key = rand_gen.next() % max_tuple_id;
       bool ret = my_map->find(key, value);
       if (ret == false) {
-        fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
+       // fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
       }
       // ++read_operation_count;
     } else if (rand_num % 100 < config[0] + config[1]){
       int64_t key = rand_gen.next() % max_tuple_id;
       bool ret = my_map->update(key, 100);
       if (ret == false) {
-        fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
+        //fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
       }
       // ++write_operation_count;
     }
@@ -145,7 +145,7 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
       int64_t my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
       bool ret = my_map->insert(my_id, 100);
       if (ret == false) {
-        fprintf(stderr, "insert failed!\n");
+        //fprintf(stderr, "insert failed!\n");
       }
       // ++insert_operation_count;
     }
@@ -158,7 +158,7 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
 void RunWorkload(const int &thread_count, const std::vector<int> config) {
   operation_counts = new int[thread_count];
 
-  cuckoohash_map<int64_t, int64_t> my_map;  
+  cuckoohash_map<int64_t, int64_t> my_map(100000000);
   max_tuple_id = 1000;
   // populate.
   for (int i = 0; i < max_tuple_id; ++i) {
@@ -195,11 +195,13 @@ int main() {
   pFile = fopen("libcuckoo.log", "w");
   
   std::vector<std::vector<int>> configs;
-  // configs.push_back({0,0,100});
-  // configs.push_back({0,20,80});
-  // configs.push_back({0,80,20});
-  // configs.push_back({20,0,80});
+  configs.push_back({0,0,100});
+  configs.push_back({0,20,80});
+  configs.push_back({0,80,20});
+  configs.push_back({20,0,80});
   configs.push_back({80,0,20});
+  configs.push_back({20,80,0});
+  configs.push_back({80,20,0});
   for (auto config : configs) {
     RunWorkload(1, config);
       for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
