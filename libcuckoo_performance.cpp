@@ -194,11 +194,11 @@ int main() {
   pFile = fopen("libcuckoo.log", "w");
   
   std::vector<std::vector<int>> configs;
-  // configs.emplace_back({0,0,100});
-  // configs.emplace_back({0,20,80});
-  // configs.emplace_back({0,80,20});
-  // configs.emplace_back({20,0,80});
-  configs.emplace_back({80,0,20});
+  // configs.push_back({0,0,100});
+  // configs.push_back({0,20,80});
+  // configs.push_back({0,80,20});
+  // configs.push_back({20,0,80});
+  configs.push_back({80,0,20});
   for (auto config : configs) {
     RunWorkload(1, config);
       for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
