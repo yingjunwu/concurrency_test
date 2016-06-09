@@ -119,28 +119,21 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
   int operation_count = 0;
   // int read_operation_count = 0;
   // int write_operation_count = 0;
+  // int insert_operation_count = 0;
   int64_t value = 0;
   while (true) {
     if (is_running == false) {
       break;
     }
     int rand_num = rand_gen.next();
-    if (rand_num % 100 < config[0]) {  
-      int64_t my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
-      bool ret = my_map->insert(my_id, 100);
+    if (rand_num % 100 < config[0]) {
+      int64_t key = rand_gen.next() % max_tuple_id;
+      bool ret = my_map->find(key, value);
       if (ret == false) {
-        fprintf(stderr, "insert failed!\n");
+        fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
       }
-
-    }
-    else if (rand_num % 100 < config[0] + config[1]) {
-        int64_t key = rand_gen.next() % max_tuple_id;
-        bool ret = my_map->find(key, value);
-        if (ret == false) {
-          fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
-        }
-        // ++read_operation_count;
-    } else {
+      // ++read_operation_count;
+    } else if (rand_num % 100 < config[0] + config[1]){
       int64_t key = rand_gen.next() % max_tuple_id;
       bool ret = my_map->update(key, 100);
       if (ret == false) {
@@ -148,10 +141,18 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
       }
       // ++write_operation_count;
     }
+    else {  
+      int64_t my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
+      bool ret = my_map->insert(my_id, 100);
+      if (ret == false) {
+        fprintf(stderr, "insert failed!\n");
+      }
+      // ++insert_operation_count;
+    }
     ++operation_count;
   }
   operation_counts[thread_id] = operation_count;
-  // printf("read count = %d, write count = %d\n", read_operation_count, write_operation_count);
+  printf("read count = %d, write count = %d, insert count = %d\n", read_operation_count, write_operation_count, insert_operation_count);
 }
 
 void RunWorkload(const int &thread_count, const std::vector<int> config) {
