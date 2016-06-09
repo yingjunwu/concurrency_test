@@ -152,7 +152,7 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
     ++operation_count;
   }
   operation_counts[thread_id] = operation_count;
-  printf("read count = %d, write count = %d, insert count = %d\n", read_operation_count, write_operation_count, insert_operation_count);
+  // printf("read count = %d, write count = %d, insert count = %d\n", read_operation_count, write_operation_count, insert_operation_count);
 }
 
 void RunWorkload(const int &thread_count, const std::vector<int> config) {
