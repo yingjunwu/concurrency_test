@@ -74,8 +74,8 @@ def TransformData():
   
 
 def DrawScalability(throughputs):
-  # configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20','80,20,0','20,80,0']
-  configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20']
+  configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20','80,20,0','20,80,0']
+  # configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20']
   threads = [1,8,16,24,32,40]
 
   YCSB_PROTO_LABEL = [ \
@@ -84,8 +84,8 @@ def DrawScalability(throughputs):
   'R=0, W=80, I=20', \
   'R=20, W=0, I=80', \
   'R=80, W=0, I=20', \
-  # 'R=20, W=80, I=0', \
-  # 'R=80, W=20, I=0', \
+  'R=20, W=80, I=0', \
+  'R=80, W=20, I=0', \
   ]
   
   matplotlib.rcParams['xtick.labelsize'] = 20
@@ -115,7 +115,7 @@ def DrawScalability(throughputs):
              handletextpad=0.2, handleheight=2)
   
   # variable: core_cnt, proto
-  filename = 'myfigure2'
+  filename = 'myfigure'
   plt.savefig(filename + ".eps", bbox_inches='tight', format='eps')
   ConvertEpsToPdf(filename)
 

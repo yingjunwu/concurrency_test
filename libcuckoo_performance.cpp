@@ -110,7 +110,7 @@ private:
 
 /////////////////////////////////////////
 // timestamp stuffs
-const size_t batch_ts_count = 100;
+const size_t batch_ts_count = 1000;
 std::atomic<int64_t> max_tuple_id;
 
 struct BatchTimestamp{
