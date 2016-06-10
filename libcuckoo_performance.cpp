@@ -107,14 +107,47 @@ private:
   system_clock::time_point end_time_;
 };
 
+
+/////////////////////////////////////////
+// timestamp stuffs
+const size_t batch_ts_count = 100;
 std::atomic<int64_t> max_tuple_id;
+
+struct BatchTimestamp{
+  BatchTimestamp(){
+    curr_ts_ = 0;
+    max_ts_ = 0;
+  }
+  
+  int64_t GetTimestamp(){
+    if (curr_ts_ >= max_ts_ - 1){
+      int64_t timestamp = max_tuple_id.fetch_add(batch_ts_count, std::memory_order_relaxed);
+      curr_ts_ = timestamp;
+      max_ts_ = timestamp + batch_ts_count;
+    }
+
+    int64_t ret_ts = curr_ts_;
+    ++curr_ts_;
+    return ret_ts;
+  }
+  
+  int64_t curr_ts_;
+  int64_t max_ts_;
+};
+/////////////////////////////////////////
+
 const int time_duration = 10;
 bool is_running = false;
 int *operation_counts = nullptr;
 FILE * pFile;
 
+
+
 void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const std::vector<int> config) {
   PinToCore(thread_id);
+
+  BatchTimestamp batch_ts;
+
   fast_random rand_gen(thread_id);
   int operation_count = 0;
   // int read_operation_count = 0;
@@ -129,24 +162,24 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
     if (rand_num % 100 < config[0]) {
       int64_t key = rand_gen.next() % max_tuple_id;
       bool ret = my_map->find(key, value);
-      if (ret == false) {
-       // fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
-      }
+      // if (ret == false) {
+      //  fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
+      // }
       // ++read_operation_count;
     } else if (rand_num % 100 < config[0] + config[1]){
       int64_t key = rand_gen.next() % max_tuple_id;
       bool ret = my_map->update(key, 100);
-      if (ret == false) {
-        //fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
-      }
+      // if (ret == false) {
+      //   fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
+      // }
       // ++write_operation_count;
     }
     else {  
-      int64_t my_id = max_tuple_id.fetch_add(1, std::memory_order_relaxed);
+      int64_t my_id = batch_ts.GetTimestamp();
       bool ret = my_map->insert(my_id, 100);
-      if (ret == false) {
-        //fprintf(stderr, "insert failed!\n");
-      }
+      // if (ret == false) {
+      //   fprintf(stderr, "insert failed!\n");
+      // }
       // ++insert_operation_count;
     }
     ++operation_count;
