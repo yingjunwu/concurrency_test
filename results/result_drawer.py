@@ -47,7 +47,7 @@ def TransformData():
   
   throughputs = np.zeros((len(configs), len(threads)))
 
-  f = open('libcuckoo.log')
+  f = open('libcuckoo_1.log')
 
   while 1:
     line = f.readline().rstrip("\n")
@@ -115,7 +115,7 @@ def DrawScalability(throughputs):
              handletextpad=0.2, handleheight=2)
   
   # variable: core_cnt, proto
-  filename = 'myfigure'
+  filename = 'myfigure_1'
   plt.savefig(filename + ".eps", bbox_inches='tight', format='eps')
   ConvertEpsToPdf(filename)
 
