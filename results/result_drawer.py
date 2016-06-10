@@ -42,7 +42,7 @@ def ConvertEpsToPdf(dir_filename):
   os.system("rm -rf " + dir_filename + ".eps")
 
 def TransformData():
-  configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20','80,20,0','20,80,0']
+  configs = ['0,0,100,0','0,20,80,0','0,80,20,0','20,0,80,0','80,0,20,0','80,20,0,0','20,80,0,0']
   threads = [1,8,16,24,32,40]
   
   throughputs = np.zeros((len(configs), len(threads)))
@@ -54,12 +54,13 @@ def TransformData():
     if not line:
       break
 
-    match_res = re.match(r'.*thread count = (.*), read = (.*), write = (.*), insert = (.*), throughput = (.*) M ops', line)
+    match_res = re.match(r'.*thread count = (.*), read = (.*), write = (.*), insert = (.*), delete = (.*), throughput = (.*) M ops', line)
     thread = match_res.group(1)
     read = match_res.group(2)
     write = match_res.group(3)
     insert = match_res.group(4)
-    throughput = match_res.group(5)
+    delete = match_res.group(5)
+    throughput = match_res.group(6)
     
     conf_str = read + ',' + write + ',' + insert
 
@@ -74,18 +75,18 @@ def TransformData():
   
 
 def DrawScalability(throughputs):
-  configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20','80,20,0','20,80,0']
+  configs = ['0,0,100,0','0,20,80,0','0,80,20,0','20,0,80,0','80,0,20,0','80,20,0,0','20,80,0,0']
   # configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20']
   threads = [1,8,16,24,32,40]
 
   YCSB_PROTO_LABEL = [ \
-  'R=0, W=0, I=100', \
-  'R=0, W=20, I=80', \
-  'R=0, W=80, I=20', \
-  'R=20, W=0, I=80', \
-  'R=80, W=0, I=20', \
-  'R=20, W=80, I=0', \
-  'R=80, W=20, I=0', \
+  'R=0, W=0, I=100, D=0', \
+  'R=0, W=20, I=80, D=0', \
+  'R=0, W=80, I=20, D=0', \
+  'R=20, W=0, I=80, D=0', \
+  'R=80, W=0, I=20, D=0', \
+  'R=20, W=80, I=0, D=0', \
+  'R=80, W=20, I=0, D=0', \
   ]
   
   matplotlib.rcParams['xtick.labelsize'] = 20
@@ -115,7 +116,7 @@ def DrawScalability(throughputs):
              handletextpad=0.2, handleheight=2)
   
   # variable: core_cnt, proto
-  filename = 'myfigure_1'
+  filename = 'myfigure_2'
   plt.savefig(filename + ".eps", bbox_inches='tight', format='eps')
   ConvertEpsToPdf(filename)
 
