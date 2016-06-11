@@ -42,12 +42,13 @@ def ConvertEpsToPdf(dir_filename):
   os.system("rm -rf " + dir_filename + ".eps")
 
 def TransformData():
-  configs = ['0,0,100,0','0,20,80,0','0,80,20,0','20,0,80,0','80,0,20,0','80,20,0,0','20,80,0,0']
+  # configs = ['0,0,100,0','0,20,80,0','0,80,20,0','20,0,80,0','80,0,20,0','80,20,0,0','20,80,0,0']
+  configs = ['20,0,40,40','20,0,50,30','20,0,60,20','20,0,70,10','20,0,80,0']
   threads = [1,8,16,24,32,40]
   
   throughputs = np.zeros((len(configs), len(threads)))
 
-  f = open('libcuckoo_1.log')
+  f = open('libcuckoo_2.log')
 
   while 1:
     line = f.readline().rstrip("\n")
@@ -62,7 +63,7 @@ def TransformData():
     delete = match_res.group(5)
     throughput = match_res.group(6)
     
-    conf_str = read + ',' + write + ',' + insert
+    conf_str = read + ',' + write + ',' + insert + ',' + delete
 
     config_idx = configs.index(conf_str)
     thread_idx = threads.index(int(thread))
@@ -76,18 +77,16 @@ def TransformData():
 
 def DrawScalability(throughputs):
   # configs = ['0,0,100,0','0,20,80,0','0,80,20,0','20,0,80,0','80,0,20,0','80,20,0,0','20,80,0,0']
-  configs = ['0,0,100,0','0,20,80,0','0,80,20,0','20,0,80,0','80,0,20,0','80,20,0,0','20,80,0,0']
+  configs = ['20,0,40,40','20,0,50,30','20,0,60,20','20,0,70,10','20,0,80,0']
   # configs = ['0,0,100','0,20,80','0,80,20','20,0,80','80,0,20']
   threads = [1,8,16,24,32,40]
 
   YCSB_PROTO_LABEL = [ \
-  'R=0, W=0, I=100, D=0', \
-  'R=0, W=20, I=80, D=0', \
-  'R=0, W=80, I=20, D=0', \
-  'R=20, W=0, I=80, D=0', \
-  'R=80, W=0, I=20, D=0', \
-  'R=20, W=80, I=0, D=0', \
-  'R=80, W=20, I=0, D=0', \
+  'R=20, I=40, D=40', \
+  'R=20, I=50, D=30', \
+  'R=20, I=60, D=20', \
+  'R=20, I=70, D=10', \
+  'R=20, I=80, D=0', \
   ]
   
   matplotlib.rcParams['xtick.labelsize'] = 20

@@ -242,6 +242,7 @@ int main() {
   configs.push_back({20,0,50,30});
   configs.push_back({20,0,60,20});
   configs.push_back({20,0,70,10});
+  configs.push_back({20,0,80,0});
   for (auto config : configs) {
     RunWorkload(1, config);
       for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
