@@ -182,7 +182,7 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
       // ++insert_operation_count;
     } else {
       int64_t key = rand_gen.next() % max_tuple_id;
-      bool ret = my_map->erase(key, 100);
+      bool ret = my_map->erase(key);
 
     }
     ++operation_count;
