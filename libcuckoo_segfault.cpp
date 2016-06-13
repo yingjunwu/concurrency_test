@@ -194,7 +194,7 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, std::vector<i
 void RunWorkload(const int &thread_count, const std::vector<int> config) {
   operation_counts = new int[thread_count];
 
-  cuckoohash_map<int64_t, std::vector<int64_t>> my_map(10000000 * thread_count);
+  cuckoohash_map<int64_t, std::vector<int64_t>> my_map;
   max_tuple_id = 1000;
   // populate.
   for (int i = 0; i < max_tuple_id; ++i) {
