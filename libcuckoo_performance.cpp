@@ -7,6 +7,7 @@
 #include <atomic>
 
 #include "libcuckoo/cuckoohash_map.hh"
+#include "cuckoo_map.h"
 
 using std::chrono::high_resolution_clock;
 using std::chrono::system_clock;
@@ -141,9 +142,9 @@ bool is_running = false;
 int *operation_counts = nullptr;
 FILE * pFile;
 
+typedef CuckooMap<int64_t, int64_t> Container;
 
-
-void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_map, const std::vector<int> config) {
+void RunWorkerThread(const int &thread_id, Container *my_map, const std::vector<int> config) {
   PinToCore(thread_id);
 
   BatchTimestamp batch_ts;
@@ -161,28 +162,28 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
     int rand_num = rand_gen.next();
     if (rand_num % 100 < config[0]) {
       int64_t key = rand_gen.next() % max_tuple_id;
-      bool ret = my_map->find(key, value);
+      bool ret = my_map->Find(key, value);
       // if (ret == false) {
       //  fprintf(stderr, "read failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
       // }
       // ++read_operation_count;
     } else if (rand_num % 100 < config[0] + config[1]){
       int64_t key = rand_gen.next() % max_tuple_id;
-      bool ret = my_map->update(key, 100);
+      my_map->Update(key, 100, false);
       // if (ret == false) {
       //   fprintf(stderr, "update failed! key = %lu, max_tuple_id = %lu\n", key, max_tuple_id.load());
       // }
       // ++write_operation_count;
     } else if (rand_num % 100 < config[0] + config[1] + config[2]){
       int64_t my_id = batch_ts.GetTimestamp();
-      bool ret = my_map->insert(my_id, 100);
+      bool ret = my_map->Insert(my_id, 100);
       // if (ret == false) {
       //   fprintf(stderr, "insert failed!\n");
       // }
       // ++insert_operation_count;
     } else {
       int64_t key = rand_gen.next() % max_tuple_id;
-      bool ret = my_map->erase(key);
+      bool ret = my_map->Erase(key);
 
     }
     ++operation_count;
@@ -191,14 +192,15 @@ void RunWorkerThread(const int &thread_id, cuckoohash_map<int64_t, int64_t> *my_
   // printf("read count = %d, write count = %d, insert count = %d\n", read_operation_count, write_operation_count, insert_operation_count);
 }
 
+
 void RunWorkload(const int &thread_count, const std::vector<int> config) {
   operation_counts = new int[thread_count];
 
-  cuckoohash_map<int64_t, int64_t> my_map(20000000 * thread_count);
+  Container my_map;
   max_tuple_id = 1000;
   // populate.
   for (int i = 0; i < max_tuple_id; ++i) {
-    my_map[i] = 100;
+    my_map.Insert(i, 100);
   }
 
   is_running = true;
