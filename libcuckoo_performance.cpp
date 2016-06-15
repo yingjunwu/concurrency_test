@@ -233,18 +233,18 @@ int main() {
   pFile = fopen("libcuckoo.log", "w");
   
   std::vector<std::vector<int>> configs;
-  // configs.push_back({0,0,100,0});
-  // configs.push_back({0,20,80,0});
-  // configs.push_back({0,80,20,0});
-  // configs.push_back({20,0,80,0});
-  // configs.push_back({80,0,20,0});
-  // configs.push_back({20,80,0,0});
-  // configs.push_back({80,20,0,0});
-  configs.push_back({20,0,40,40});
-  configs.push_back({20,0,50,30});
-  configs.push_back({20,0,60,20});
-  configs.push_back({20,0,70,10});
+  configs.push_back({0,0,100,0});
+  configs.push_back({0,20,80,0});
+  configs.push_back({0,80,20,0});
   configs.push_back({20,0,80,0});
+  configs.push_back({80,0,20,0});
+  configs.push_back({20,80,0,0});
+  configs.push_back({80,20,0,0});
+  // configs.push_back({20,0,40,40});
+  // configs.push_back({20,0,50,30});
+  // configs.push_back({20,0,60,20});
+  // configs.push_back({20,0,70,10});
+  // configs.push_back({20,0,80,0});
   for (auto config : configs) {
     RunWorkload(1, config);
       for (int thread_count = 8; thread_count <= 40; thread_count += 8) {
